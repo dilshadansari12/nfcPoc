@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button, ToastAndroid, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Button, ToastAndroid, TextInput, ScrollView, Image } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+
 import NfcManager, {
   NfcTech,
   Ndef,
@@ -14,11 +16,14 @@ NfcManager.start();
 function App() {
   const [isWritemood, setiswritemood] = React.useState(false);
   const [isReadmood, setisReadmood] = React.useState(false);
+  const [isScanMood, setisScanMood] = React.useState(false);
   const [text, onChangeText] = React.useState("");
+  const [nfcTagData, setnfcTagData] = React.useState({ id: null, tagTech: null, text: null, tagObject: null });
 
   // for write 
   const writeNdef = async () => {
     console.log("in");
+    setisScanMood(true)
     if (isWritemood) {
       if (!text) return;
       console.log("start");
@@ -52,7 +57,8 @@ function App() {
       }
       setiswritemood("");
       onChangeText("");
-
+      setisScanMood(false);
+      ToastAndroid.show("success! writing completed", ToastAndroid.SHORT);
     } catch (ex) {
       console.log("fail try ", ex);
       handleException(ex);
@@ -65,30 +71,107 @@ function App() {
 
   // for read
 
+  const withAndroidPrompt = async () => {
+    console.log("satrt reading ");
+    let tag = null;
+
+    try {
+      console.log("try");
+      await NfcManager.requestTechnology([NfcTech.Ndef]);
+      tag = await NfcManager.getTag();
+      tag.ndefStatus = await NfcManager.ndefHandler.getNdefStatus();
+
+      if (Platform.OS === 'ios') {
+        await NfcManager.setAlertMessageIOS('Success');
+      }
+    } catch (ex) {
+      console.log("somthing is missing", ex);
+    } finally {
+      NfcManager.cancelTechnologyRequest();
+    }
+    const tagId = tag?.id;
+    const tagTech = tag?.techTypes;
+    const tagNdef = tag?.ndefMessage;
+    const ndef = Array.isArray(tag.ndefMessage) && tag.ndefMessage.length > 0 ? tag.ndefMessage[0] : null;
+    let text = Ndef.util.bytesToString(ndef.payload);
+    const tagObject = JSON.stringify(tag, null, 2);
+    setnfcTagData({ id: tagId, tagTech, text, tagObject })
+  };
 
 
   return (
     <View style={styles.wrapper}>
+
+      {/* for write */}
       {
         isWritemood && (
           <View style={styles.overlay}>
-            <TextInput
-              style={styles.inputTag}
-              placeholder='Enter Tag Details'
-              onChangeText={onChangeText}
-              value={text}
-            />
-            <Button title='go' style={{ color: "red" }} onPress={writeNdef} />
+            {!isScanMood && <View style={styles.contentFotWriter}>
+              <TextInput
+                style={styles.inputTag}
+                placeholder='Enter Text'
+                onChangeText={onChangeText}
+                value={text}
+              />
+
+              <TouchableOpacity onPress={writeNdef} style={{ backgroundColor: '#06bcee', padding: 10, width: 200, marginTop: 15 }}>
+                <Text style={{ color: 'black', textAlign: 'center' }} onPress={writeNdef} >GO</Text>
+              </TouchableOpacity>
+            </View>
+            }
+
+            {/* scan your tag */}
+            {
+              isScanMood && <View style={styles.contentFotWriter}>
+                <Image source={require('./nfctag.jpg')} height={2} width={2} style={styles.tagImg} />
+                <Text style={{ textAlign: "center", marginTop: 20 }}>Scan Your Tag</Text>
+              </View>
+            }
           </View>
         )
       }
 
-      <View style={styles.buttonGroup}>
-        <Button onPress={() => { setiswritemood(!isWritemood) }} title='Write Tag' />
-        <Button onPress={() => { setisReadmood(!isReadmood) }} title='Read Tag' />
+      {
+        nfcTagData?.id && isReadmood && (
+          <ScrollView style={styles.tagDetails}>
+            <View>
+              <View>
+                <Text>Id</Text>
+                <Text>{nfcTagData?.id}</Text>
+              </View>
+
+              <View>
+                <Text>Tag Tech</Text>
+                <Text>{nfcTagData?.tagTech.map((r) => r)}</Text>
+              </View>
+
+              <View>
+                <Text>Tag Text</Text>
+                <Text>{nfcTagData?.text}</Text>
+              </View>
+
+              <View>
+                <Text>Tag Object</Text>
+                <Text>{nfcTagData?.tagObject}</Text>
+              </View>
+
+            </View>
+          </ScrollView>
+        )
+      }
+
+
+
+      {!(isWritemood || isReadmood) && <View style={styles.buttonGroup}>
+        <TouchableOpacity onPress={() => { setiswritemood(!isWritemood) }} style={{ borderWidth: 2, borderColor: "#06bcee", padding: 10, width: 200 }}>
+          <Text style={{ color: 'black', textAlign: 'center' }}>Write Tag</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => { setisReadmood(!setisReadmood), withAndroidPrompt() }} style={{ backgroundColor: '#06bcee', padding: 10, width: 200 }}>
+          <Text style={{ color: 'white', textAlign: 'center' }}> Read Tag</Text>
+        </TouchableOpacity>
       </View>
-
-
+      }
     </View>
   );
 }
@@ -96,27 +179,60 @@ function App() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    justifyContent: 'start',
+    justifyContent: 'center',
     alignItems: 'center',
+    position: "relative"
   },
   buttonGroup: {
     width: "100%",
     display: "flex",
+    flexDirection: "row",
     justifyContent: "space-evenly",
-    marginTop: 200
+    marginBottom: 100
   },
   overlay: {
+    position: "absolute",
+    bottom: 0,
     width: "100%",
-    height: 100,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+    backgroundColor: "#aebcc0b8",
+    height: 300,
+    display: "flex",
+    alignItems: "center",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20
+
   },
+  contentFotWriter: {
+    width: "90%",
+    padding: 20,
+    display: "flex",
+    alignItems: "center",
+  },
+  tagImg: {
+    width: 130,
+    height: 130,
+    borderRadius: 20,
+  },
+
   inputTag: {
+    width: 300,
     height: 40,
     margin: 12,
     borderWidth: 1,
     padding: 10,
     backgroundColor: "white"
-  }
+  },
+  tagDetails: {
+    width: "100%",
+    height: "100%",
+    zIndex: 99999999999,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: "grey",
+    // display: "flex",
+    // justifyContent: "space-around"
+  },
 });
 
 export default App;
