@@ -72,7 +72,8 @@ function App() {
   // for read
 
   const withAndroidPrompt = async () => {
-    console.log("satrt reading ");
+    setisScanMood(true)
+    console.log("satrt reading ", isReadmood, isScanMood);
     let tag = null;
 
     try {
@@ -95,7 +96,8 @@ function App() {
     const ndef = Array.isArray(tag.ndefMessage) && tag.ndefMessage.length > 0 ? tag.ndefMessage[0] : null;
     let text = Ndef.util.bytesToString(ndef.payload);
     const tagObject = JSON.stringify(tag, null, 2);
-    setnfcTagData({ id: tagId, tagTech, text, tagObject })
+    setnfcTagData({ id: tagId, tagTech, text, tagObject });
+    setisScanMood(false);
   };
 
 
@@ -131,6 +133,16 @@ function App() {
         )
       }
 
+      {/* for read dialog */}
+      {
+        isScanMood && isReadmood && <View style={styles.overlay}>
+          <View style={styles.contentFotWriter}>
+            <Image source={require('./nfctag.jpg')} height={2} width={2} style={styles.tagImg} />
+            <Text style={{ textAlign: "center", marginTop: 20 }}>Scan Your Tag</Text>
+          </View>
+        </View>
+      }
+
       {
         nfcTagData?.id && isReadmood && (
           <ScrollView style={styles.tagDetails}>
@@ -154,8 +166,8 @@ function App() {
                 <Text>Tag Object</Text>
                 <Text>{nfcTagData?.tagObject}</Text>
               </View>
-
             </View>
+            <Button title='GO BACK' onPress={() => { setisReadmood(false), setnfcTagData({ id: null, tagTech: null, text: null, tagObject: null }) }} />
           </ScrollView>
         )
       }
@@ -167,7 +179,7 @@ function App() {
           <Text style={{ color: 'black', textAlign: 'center' }}>Write Tag</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => { setisReadmood(!setisReadmood), withAndroidPrompt() }} style={{ backgroundColor: '#06bcee', padding: 10, width: 200 }}>
+        <TouchableOpacity onPress={() => { setisReadmood(true), withAndroidPrompt() }} style={{ backgroundColor: '#06bcee', padding: 10, width: 200 }}>
           <Text style={{ color: 'white', textAlign: 'center' }}> Read Tag</Text>
         </TouchableOpacity>
       </View>
@@ -221,18 +233,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 10,
     backgroundColor: "white"
-  },
-  tagDetails: {
-    width: "100%",
-    height: "100%",
-    zIndex: 99999999999,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    backgroundColor: "grey",
-    // display: "flex",
-    // justifyContent: "space-around"
-  },
+  }
 });
 
 export default App;
