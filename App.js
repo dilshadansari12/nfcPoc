@@ -22,29 +22,23 @@ function App() {
 
   // for write 
   const writeNdef = async () => {
-    console.log("in");
     setisScanMood(true)
     if (isWritemood) {
       if (!text) return;
-      console.log("start");
       const value = text;
       await NfcProxyWriteNdef({ type: 'TEXT', value });
     }
   };
 
   const NfcProxyWriteNdef = async ({ type, value }) => {
-    console.log("NfcProxyWriteNdef", type, value);
     let result = false;
-
     try {
-      console.log("tryin");
       await NfcManager.requestTechnology(NfcTech.Ndef, {
         alertMessage: 'Ready to write some NDEF',
       });
 
       let bytes = null;
       if (type === 'TEXT') {
-        console.log("text");
         bytes = Ndef.encodeMessage([Ndef.textRecord(value)]);
       }
 
@@ -73,11 +67,9 @@ function App() {
 
   const withAndroidPrompt = async () => {
     setisScanMood(true)
-    console.log("satrt reading ", isReadmood, isScanMood);
     let tag = null;
 
     try {
-      console.log("try");
       await NfcManager.requestTechnology([NfcTech.Ndef]);
       tag = await NfcManager.getTag();
       tag.ndefStatus = await NfcManager.ndefHandler.getNdefStatus();
@@ -92,7 +84,6 @@ function App() {
     }
     const tagId = tag?.id;
     const tagTech = tag?.techTypes;
-    const tagNdef = tag?.ndefMessage;
     const ndef = Array.isArray(tag.ndefMessage) && tag.ndefMessage.length > 0 ? tag.ndefMessage[0] : null;
     let text = Ndef.util.bytesToString(ndef.payload);
     const tagObject = JSON.stringify(tag, null, 2);
@@ -154,12 +145,12 @@ function App() {
 
               <View>
                 <Text>Tag Tech</Text>
-                <Text>{nfcTagData?.tagTech.map((r) => r)}</Text>
+                <Text>{nfcTagData?.tagTech.map((r) => r)} </Text>
               </View>
 
               <View>
                 <Text>Tag Text</Text>
-                <Text>{nfcTagData?.text}</Text>
+                <Text style={{ fontSize: "bold", fontSize: 20 }}>{nfcTagData?.text}</Text>
               </View>
 
               <View>
@@ -171,8 +162,6 @@ function App() {
           </ScrollView>
         )
       }
-
-
 
       {!(isWritemood || isReadmood) && <View style={styles.buttonGroup}>
         <TouchableOpacity onPress={() => { setiswritemood(!isWritemood) }} style={{ borderWidth: 2, borderColor: "#06bcee", padding: 10, width: 200 }}>
